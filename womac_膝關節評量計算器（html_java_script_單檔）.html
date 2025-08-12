@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WOMAC 膝關節評量計算器</title>
+  <style>
+    /* ===== 新版視覺：高對比、可讀性更佳、行動友善 ===== */
+    :root {
+      --bg: #0b1020;           /* 深色背景 */
+      --panel: #0f172a;        /* 卡片背景 */
+      --elev: #111827;         /* 提升面 */
+      --text: #e7ecf4;         /* 主要文字 */
+      --muted: #9fb0c2;        /* 次要文字 */
+      --line: #1f2a3a;         /* 邊框 */
+      --ring: #7dd3fc;         /* 焦點 */
+      --primary: #22d3ee;      /* 主要強調 */
+      --primary-ink: #062129;  /* 主要按鈕文字 */
+      --ok: #34d399;           /* 成功 */
+      --warn: #f59e0b;         /* 警示 */
+      --err: #f87171;          /* 錯誤 */
+      --chip: #0d1527;         /* 選項底 */
+      --chip-on: #0f2533;      /* 選項 hover */
+    }
+    [data-theme="light"]:root{
+      --bg:#f6f7fb; --panel:#ffffff; --elev:#ffffff; --text:#0d1321; --muted:#5b6a7a; --line:#e5e9f0; --ring:#0284c7; --primary:#06b6d4; --primary-ink:#05202a; --chip:#f1f5f9; --chip-on:#e2e8f0;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family: ui-sans-serif, -apple-system, Segoe UI, Roboto, Noto Sans TC, Helvetica, Arial;
+      color:var(--text); background: radial-gradient(900px 600px at 15% -10%, #142036, transparent), radial-gradient(900px 600px at 100% -10%, #0b3a4a, transparent), var(--bg);
+    }
+    .container{max-width:1100px;margin:0 auto;padding:20px}
+
+    /* Header */
+    header{position:sticky;top:0;z-index:10;background:linear-gradient(180deg, rgba(5,9,20,.9), rgba(5,9,20,.55));backdrop-filter: blur(10px); border-bottom:1px solid var(--line)}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:12px 0}
+    .title{font-weight:800;letter-spacing:.4px}
+    .subtitle{color:var(--muted);font-size:12px}
+    .spacer{flex:1}
+
+    .btn{appearance:none;border:1px solid var(--line);background:var(--chip);color:var(--text);padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:700;letter-spacing:.3px;transition:transform .06s ease, box-shadow .2s ease, border-color .2s ease}
+    .btn:hover{border-color:var(--ring); box-shadow:0 10px 24px -14px rgba(125,211,252,.6)}
+    .btn:active{transform:translateY(1px)}
+    .btn.primary{background:linear-gradient(135deg, #0891b2, var(--primary));border:none;color:var(--primary-ink)}
+    .btn.ghost{background:transparent;border:1px dashed var(--line);color:var(--muted)}
+    .btn.switch{display:inline-flex;align-items:center;gap:8px}
+
+    /* 完成度條 */
+    .progress{height:8px;background:#0a1222;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+    .bar{height:100%;width:0%;background:linear-gradient(90deg, #0ea5e9, #22d3ee);transition:width .3s ease}
+
+    /* Layout */
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
+    .card{grid-column:span 12;background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+    .card h2{margin:0;padding:14px 16px;border-bottom:1px solid var(--line);font-size:16px;background:var(--elev)}
+    .card .content{padding:14px 16px}
+    @media (min-width: 900px){.col-6{grid-column:span 6}}
+
+    /* 問題與選項 */
+    .q{padding:12px 0;border-bottom:1px dashed var(--line)}
+    .q:last-child{border-bottom:none}
+    .q-title{font-weight:700;margin-bottom:10px}
+    .scale{display:grid;grid-template-columns:repeat(5,minmax(64px,1fr));gap:8px}
+    .opt{position:relative;border:1px solid var(--line);background:var(--chip);padding:12px;border-radius:12px;text-align:center;cursor:pointer;user-select:none; font-weight:700}
+    .opt .cap{display:block;font-size:12px;color:var(--muted);font-weight:500}
+    input[type=radio]{position:absolute;opacity:0;pointer-events:none}
+    input[type=radio]:focus + .opt{outline:2px solid var(--ring)}
+    input[type=radio]:checked + .opt{outline:2px solid var(--ring); box-shadow:0 8px 22px -12px rgba(125,211,252,.7); background:var(--chip-on)}
+
+    /* 統計區 */
+    .results{display:grid;grid-template-columns:repeat(12,1fr);gap:12px;padding:14px 16px 18px}
+    .stat{grid-column:span 12;background:var(--elev);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+    .stat h3{margin:0 0 6px;font-size:13px;color:var(--muted)}
+    .stat .val{font-size:28px;font-weight:900;letter-spacing:.4px}
+    .stat.small .val{font-size:18px}
+    @media (min-width:900px){.stat{grid-column:span 3}.stat.wide{grid-column:span 6}}
+
+    .missing{outline:2px dashed var(--warn)}
+    .note{color:var(--muted);font-size:12px}
+
+    /* 行動裝置底部操作列 */
+    .dock{position:sticky;bottom:0;z-index:9;background:linear-gradient(180deg, rgba(5,9,20,0), rgba(5,9,20,.9));padding:10px 0}
+    .dock-inner{display:flex;gap:10px}
+    .dock .btn{flex:1}
+
+    footer{color:var(--muted);font-size:12px;text-align:center;padding:24px 8px 40px}
+    .link{color:var(--primary);text-decoration:underline dotted;cursor:pointer}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container toolbar">
+      <div>
+        <div class="title">WOMAC 膝關節評量計算器</div>
+        <div class="subtitle">自我評估版 · 0=沒有 → 4=非常嚴重</div>
+      </div>
+      <div class="spacer"></div>
+      <button class="btn switch" id="themeBtn" title="切換深/淺色">🌓 切換主題</button>
+      <button class="btn" id="saveBaselineBtn" title="將目前分數存為基線，之後可比較改善幅度">存為基線</button>
+      <button class="btn primary" id="calcBtn" title="計算當前分數">計算分數</button>
+      <button class="btn ghost" id="clearBtn">重設</button>
+    </div>
+    <div class="container" style="padding-top:0;padding-bottom:12px">
+      <div class="progress" aria-label="完成度"><div class="bar" id="progressBar"></div></div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="grid">
+      <section class="card col-6" id="painCard">
+        <h2>A. 疼痛（Pain） · 5 題</h2>
+        <div class="content" id="pain"></div>
+      </section>
+      <section class="card col-6" id="stiffCard">
+        <h2>B. 僵硬（Stiffness） · 2 題</h2>
+        <div class="content" id="stiff"></div>
+      </section>
+      <section class="card" id="funcCard">
+        <h2>C. 功能限制（Physical Function） · 17 題</h2>
+        <div class="content" id="func"></div>
+      </section>
+
+      <section class="card">
+        <h2>結果</h2>
+        <div class="results" id="results">
+          <div class="stat"><h3>疼痛分數（0–20）</h3><div class="val" id="painVal">—</div><div class="note" id="painNorm"></div></div>
+          <div class="stat"><h3>僵硬分數（0–8）</h3><div class="val" id="stiffVal">—</div><div class="note" id="stiffNorm"></div></div>
+          <div class="stat"><h3>功能分數（0–68）</h3><div class="val" id="funcVal">—</div><div class="note" id="funcNorm"></div></div>
+          <div class="stat wide"><h3>WOMAC 總分（0–96，越高越差）</h3><div class="val" id="totalVal">—</div><div class="note" id="totalNorm"></div></div>
+          <div class="stat wide small"><h3>與基線比較（改善率 %）</h3><div class="val" id="improveVal">尚未設定基線</div><div class="note">基線 = 第一次填寫或治療/保健開始前的分數</div></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>使用說明</h2>
+        <div class="content">
+          <ul>
+            <li>每題 0–4 分：0 沒有 · 1 輕微 · 2 中等 · 3 嚴重 · 4 非常嚴重。</li>
+            <li>標準化（0–100）：=（分數 ÷ 該範疇最大分）× 100，便於追蹤趨勢。</li>
+            <li>臨床上常以 <strong>≥ 20%</strong> 的總分下降視為「有意義的改善」。</li>
+            <li>若出現紅旗症狀（急性腫脹、熱痛、無法負重、活動度劇降），請立即就醫。</li>
+          </ul>
+        </div>
+      </section>
+    </div>
+
+    <!-- 行動裝置底部操作列 -->
+    <div class="dock">
+      <div class="container dock-inner">
+        <button class="btn" id="exportJson">匯出作答</button>
+        <button class="btn" id="importJson">匯入作答</button>
+        <button class="btn primary" id="calcBtn2">計算</button>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    版本 2.0（強化視覺與可用性） · 本工具僅供自我追蹤，不替代專業醫療建議。
+  </footer>
+
+  <script>
+    // ===== 問題集 =====
+    const QUESTIONS = {
+      pain: [
+        '走平地時的膝部疼痛',
+        '上或下樓梯時的膝部疼痛',
+        '夜間（躺下或睡覺時）的膝部疼痛',
+        '坐著或躺著時的膝部疼痛',
+        '站立時的膝部疼痛',
+      ],
+      stiffness: [
+        '早晨起床後的膝部僵硬',
+        '白天久坐後再次活動時的僵硬',
+      ],
+      function: [
+        '下樓梯', '上樓梯', '長時間站立', '彎腰觸地', '平地行走', '上車或下車',
+        '在商店購物', '穿脫襪子', '上床或下床', '從沙發起身', '從高處取物', '從地上拾物',
+        '行走 15 分鐘以上', '穿越房間', '洗澡後擦乾身體', '坐下或起立', '上廁所'
+      ]
+    };
+
+    const MAX = { pain: 20, stiffness: 8, function: 68, total: 96 };
+
+    // ===== 渲染 =====
+    function caption(v){ return ['沒有','輕微','中等','嚴重','非常嚴重'][v] || '' }
+
+    function rowTemplate(key, idx, label){
+      const name = `${key}-${idx}`;
+      return `
+      <div class=\"q\">
+        <div class=\"q-title\">${idx+1}. ${label}</div>
+        <div class=\"scale\" role=\"radiogroup\" aria-labelledby=\"${name}-lab\">
+          ${[0,1,2,3,4].map(v => `
+            <label>
+              <input type=\"radio\" name=\"${name}\" value=\"${v}\" aria-label=\"${v}\" />
+              <div class=\"opt\">${v}<span class=\"cap\">${caption(v)}</span></div>
+            </label>
+          `).join('')}
+        </div>
+      </div>`
+    }
+
+    function renderSection(containerId, key){
+      const el = document.getElementById(containerId);
+      el.innerHTML = QUESTIONS[key].map((q,i)=>rowTemplate(key,i,q)).join('');
+    }
+
+    function renderAll(){
+      renderSection('pain', 'pain');
+      renderSection('stiff', 'stiffness');
+      renderSection('func', 'function');
+      attachChangeListeners();
+      updateProgress();
+    }
+
+    // ===== 計分 =====
+    function getSectionScore(key){
+      const n = QUESTIONS[key].length;
+      let sum = 0; let missing = [];
+      for(let i=0;i<n;i++){
+        const name = `${key}-${i}`;
+        const selected = document.querySelector(`input[name=\"${name}\"]:checked`);
+        if(!selected){ missing.push(name); continue; }
+        sum += Number(selected.value);
+      }
+      return { sum, missing };
+    }
+
+    function norm(val, max){ return Math.round((val / max) * 1000) / 10 }
+
+    function highlightMissing(missing){
+      document.querySelectorAll('.missing').forEach(el => el.classList.remove('missing'));
+      missing.forEach(name => {
+        const group = document.querySelector(`input[name=\"${name}\"]`)?.closest('.scale');
+        if(group) group.classList.add('missing');
+      });
+      if(missing.length){
+        const top = document.querySelector('.missing').getBoundingClientRect().top + window.pageYOffset - 120;
+        window.scrollTo({ top, behavior:'smooth' });
+      }
+    }
+
+    function calculate(){
+      const p = getSectionScore('pain');
+      const s = getSectionScore('stiffness');
+      const f = getSectionScore('function');
+      const missing = [...p.missing, ...s.missing, ...f.missing];
+      highlightMissing(missing);
+      if(missing.length) return;
+
+      const total = p.sum + s.sum + f.sum;
+      // 顯示
+      setText('painVal', p.sum);
+      setText('stiffVal', s.sum);
+      setText('funcVal', f.sum);
+      setText('totalVal', total);
+
+      setText('painNorm', `標準化：${norm(p.sum, MAX.pain)} / 100`);
+      setText('stiffNorm', `標準化：${norm(s.sum, MAX.stiffness)} / 100`);
+      setText('funcNorm', `標準化：${norm(f.sum, MAX.function)} / 100`);
+      setText('totalNorm', `標準化：${norm(total, MAX.total)} / 100`);
+
+      // 與基線比較
+      const base = loadBaseline();
+      const improveEl = document.getElementById('improveVal');
+      if(base && typeof base.total === 'number' && base.total > 0){
+        const diff = base.total - total; // 分數下降為正向
+        const rate = Math.round((diff / base.total) * 1000) / 10;
+        const sign = rate > 0 ? '改善' : (rate < 0 ? '惡化' : '無變化');
+        improveEl.textContent = `${sign} ${rate}%（基線：${base.total}，${new Date(base.date).toLocaleDateString()}）`;
+        improveEl.style.color = rate >= 20 ? 'var(--ok)' : rate < 0 ? 'var(--err)' : 'var(--text)';
+      } else {
+        improveEl.textContent = '尚未設定基線';
+        improveEl.style.color = 'var(--muted)';
+      }
+      return { p: p.sum, s: s.sum, f: f.sum, total };
+    }
+
+    function setText(id, val){ document.getElementById(id).textContent = String(val) }
+
+    // ===== 進度條 =====
+    function totalQuestions(){
+      return QUESTIONS.pain.length + QUESTIONS.stiffness.length + QUESTIONS.function.length;
+    }
+    function answeredCount(){
+      return document.querySelectorAll('input[type=radio]:checked').length;
+    }
+    function updateProgress(){
+      const pct = Math.round((answeredCount() / totalQuestions()) * 100);
+      const bar = document.getElementById('progressBar');
+      bar.style.width = pct + '%';
+      bar.title = `完成度 ${pct}%`;
+    }
+    function attachChangeListeners(){
+      document.querySelectorAll('input[type=radio]').forEach(r => r.addEventListener('change', updateProgress));
+    }
+
+    // ===== 基線儲存 / 載入 =====
+    function saveBaseline(){
+      const scores = calculate();
+      if(!scores) { alert('請先完成所有題目並按「計算分數」。'); return; }
+      const payload = { ...scores, date: new Date().toISOString() };
+      localStorage.setItem('womac_baseline', JSON.stringify(payload));
+      alert('已存為基線。下次計算將顯示改善幅度。');
+    }
+    function loadBaseline(){
+      try { return JSON.parse(localStorage.getItem('womac_baseline')); } catch { return null; }
+    }
+
+    // ===== 匯出 / 匯入 =====
+    function exportJSON(){
+      const answers = {};
+      Object.keys(QUESTIONS).forEach(key => {
+        answers[key] = QUESTIONS[key].map((_, idx) => {
+          const name = `${key}-${idx}`;
+          const sel = document.querySelector(`input[name=\"${name}\"]:checked`);
+          return sel ? Number(sel.value) : null;
+        });
+      });
+      const data = { answers, timestamp: new Date().toISOString() };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `WOMAC_answers_${Date.now()}.json`; a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importJSON(){
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'application/json';
+      input.onchange = () => {
+        const file = input.files[0]; if(!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const data = JSON.parse(reader.result);
+            if(!data.answers) throw new Error('格式不正確');
+            Object.keys(QUESTIONS).forEach(key => {
+              (data.answers[key] || []).forEach((val, idx) => {
+                const name = `${key}-${idx}`;
+                if(val == null) return;
+                const radio = document.querySelector(`input[name=\"${name}\"][value=\"${val}\"]`);
+                if(radio) radio.checked = true;
+              });
+            });
+            calculate(); updateProgress();
+            alert('已匯入作答。');
+          } catch(err){ alert('匯入失敗：' + err.message); }
+        };
+        reader.readAsText(file);
+      };
+      input.click();
+    }
+
+    // ===== 主題切換 =====
+    function setTheme(mode){
+      document.documentElement.setAttribute('data-theme', mode);
+      localStorage.setItem('theme', mode);
+    }
+    function toggleTheme(){
+      const current = document.documentElement.getAttribute('data-theme') || 'dark';
+      setTheme(current === 'light' ? 'dark' : 'light');
+    }
+    function initTheme(){
+      const saved = localStorage.getItem('theme');
+      if(saved){ setTheme(saved); }
+    }
+
+    // ===== 綁定事件與初始化 =====
+    function bind(){
+      document.getElementById('calcBtn').addEventListener('click', calculate);
+      document.getElementById('calcBtn2').addEventListener('click', calculate);
+      document.getElementById('saveBaselineBtn').addEventListener('click', saveBaseline);
+      document.getElementById('clearBtn').addEventListener('click', () => { document.querySelectorAll('input[type=radio]').forEach(r=>r.checked=false); updateProgress(); document.querySelectorAll('.missing').forEach(el=>el.classList.remove('missing')); ['painVal','stiffVal','funcVal','totalVal','painNorm','stiffNorm','funcNorm','totalNorm'].forEach(id=>setText(id,'—')); const iv=document.getElementById('improveVal'); iv.textContent='尚未設定基線'; iv.style.color='var(--muted)'; });
+      document.getElementById('exportJson').addEventListener('click', exportJSON);
+      document.getElementById('importJson').addEventListener('click', importJSON);
+      document.getElementById('themeBtn').addEventListener('click', toggleTheme);
+    }
+
+    initTheme();
+    renderAll();
+    bind();
+  </script>
+</body>
+</html>
