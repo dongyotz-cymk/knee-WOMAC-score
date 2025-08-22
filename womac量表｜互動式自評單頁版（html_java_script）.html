@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WOMAC量表｜互動式自評</title>
+  <style>
+    :root {
+      --green: #16a34a; /* 綠 */
+      --yellow: #facc15; /* 黃 */
+      --red: #dc2626; /* 紅 */
+      --fg: #0f172a; /* 字色 */
+      --muted: #475569; /* 次要字色 */
+      --bg: #f8fafc; /* 背景 */
+      --card: #ffffff; /* 區塊背景 */
+      --accent: #2563eb; /* 重點色 */
+      --shadow: 0 10px 20px rgba(2, 6, 23, .06), 0 2px 6px rgba(2, 6, 23, .06);
+    }
+    html, body { height: 100%; }
+    body {
+      margin: 0; color: var(--fg); background: var(--bg);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Noto Sans TC, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 980px; margin: 48px auto; padding: 0 20px;
+    }
+    header h1 { margin: 0 0 8px; font-size: clamp(28px, 4vw, 40px); letter-spacing: .02em; }
+    header p { margin: 4px 0; color: var(--muted); }
+    .card { background: var(--card); border-radius: 16px; box-shadow: var(--shadow); padding: 20px; margin: 20px 0; }
+    .rules { font-size: 15px; }
+    .rules strong { color: var(--fg); }
+
+    /* 區塊標題與得分 */
+    .section { margin-top: 28px; }
+    .section-header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px; }
+    .section-title { font-size: 20px; font-weight: 700; }
+    .section-cap { color: var(--muted); font-size: 14px; }
+
+    /* 題目 */
+    .q { padding: 14px 16px; border-radius: 14px; border: 1px solid #e2e8f0; background: #fff; margin: 14px 0; }
+    .q legend { font-weight: 600; padding: 0 4px; }
+    .q .desc { font-size: 14px; color: var(--muted); margin-top: 2px; }
+
+    /* 漸層橫幅 */
+    .bar { height: 14px; border-radius: 10px; margin: 10px 0 10px; position: relative; overflow: hidden; border: 1px solid #e2e8f0; }
+    .bar::before {
+      content: ""; position: absolute; inset: 0;
+      background: linear-gradient(to right, var(--green), var(--yellow), var(--red));
+    }
+
+    /* 0-4 單選按鈕列 */
+    .scale { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; align-items: center; }
+    .scale label { display: grid; grid-template-columns: 20px 1fr; align-items: center; gap: 6px; padding: 8px; border-radius: 10px; border: 1px solid #e2e8f0; cursor: pointer; user-select: none; }
+    .scale input { appearance: none; width: 18px; height: 18px; border-radius: 50%; border: 2px solid #cbd5e1; display: inline-block; position: relative; }
+    .scale input:checked { border-color: var(--accent); }
+    .scale input:checked::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--accent); }
+    .scale .lbl { font-size: 13px; color: var(--muted); }
+    .scale .lbl b { color: var(--fg); font-weight: 700; }
+
+    /* 統計與工具列 */
+    .stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+    .stat { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; }
+    .stat h4 { margin: 0 0 6px; font-size: 14px; color: var(--muted); }
+    .stat .val { font-size: 20px; font-weight: 800; }
+    .overall {
+      margin-top: 8px; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;
+      background: #fff;
+    }
+    .overall .meter { height: 14px; background: #e2e8f0; position: relative; }
+    .overall .meter > span { position: absolute; height: 100%; left: 0; width: 0%; transition: width .25s ease; background: linear-gradient(to right, var(--green), var(--yellow), var(--red)); }
+    .overall .row { display: flex; gap: 16px; align-items: center; padding: 10px 12px; }
+    .overall .row .badge { font-size: 12px; color: white; background: var(--fg); border-radius: 999px; padding: 4px 10px; }
+
+    .toolbar { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+    .btn {
+      padding: 10px 14px; border-radius: 12px; border: 1px solid #d1d5db; cursor: pointer;
+      background: #fff; font-weight: 600; transition: transform .05s ease, box-shadow .2s ease;
+      box-shadow: 0 2px 0 rgba(2,6,23,.06);
+    }
+    .btn:hover { box-shadow: var(--shadow); }
+    .btn:active { transform: translateY(1px); }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
+
+    footer { color: var(--muted); font-size: 12px; margin-top: 18px; }
+
+    @media (max-width: 760px) {
+      .scale { grid-template-columns: 1fr; }
+    }
+    @media print {
+      body { background: white; }
+      .btn, .toolbar { display: none !important; }
+      .card { box-shadow: none; border: 1px solid #e5e7eb; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>WOMAC量表</h1>
+      <p>（Western Ontario and McMaster Universities Osteoarthritis Index）</p>
+    </header>
+
+    <section class="card">
+      <h2 style="margin:0 0 8px">量表目的與作答說明</h2>
+      <div class="rules">
+        <p>本量表用於評估<strong>膝關節或髖關節骨關節炎</strong>的症狀與功能狀況，適合用來追蹤治療效果或病情變化。</p>
+        <p>請依<strong>最近48小時</strong>自身的真實感受作答。每題以<strong>0–4 分</strong>表示嚴重程度：<strong>0</strong>＝沒有、<strong>1</strong>＝輕微、<strong>2</strong>＝中等、<strong>3</strong>＝嚴重、<strong>4</strong>＝非常嚴重。</p>
+      </div>
+      <div class="toolbar">
+        <button class="btn primary" id="btnScroll">開始作答</button>
+        <button class="btn" id="btnReset" title="清除全部作答">清除重填</button>
+        <button class="btn" id="btnPrint" title="列印或存成PDF">列印/存成PDF</button>
+      </div>
+    </section>
+
+    <!-- Sections 容器 -->
+    <div id="formRoot"></div>
+
+    <!-- 統計結果 -->
+    <section class="card" id="resultCard" aria-live="polite">
+      <h2 style="margin:0 0 10px">統計結果</h2>
+      <div class="stats">
+        <div class="stat"><h4>A. 疼痛（0–20）</h4><div class="val" id="sum-pain">0</div></div>
+        <div class="stat"><h4>B. 僵硬（0–8）</h4><div class="val" id="sum-stiffness">0</div></div>
+        <div class="stat"><h4>C. 日常活動困難度（0–68）</h4><div class="val" id="sum-function">0</div></div>
+        <div class="stat"><h4>總分（0–96）</h4><div class="val" id="sum-total">0</div></div>
+      </div>
+      <div class="overall" style="margin-top:14px">
+        <div class="meter"><span id="meter" style="width:0%"></span></div>
+        <div class="row">
+          <div><strong>嚴重度（%）：</strong><span id="pct">0%</span></div>
+          <div class="badge" id="level">輕微</div>
+        </div>
+      </div>
+      <footer>說明：分數越高表示症狀越嚴重；%＝總分 ÷ 96 × 100。此工具僅供自我監測，不可取代專業診斷與醫療建議。</footer>
+    </section>
+  </div>
+
+  <script>
+    // === 題目定義（可依需要微調文案） ===
+    const sections = [
+      {
+        key: 'pain',
+        title: 'A. 疼痛（Pain）',
+        items: [
+          '走路時的疼痛',
+          '上下樓梯的疼痛',
+          '夜間休息時的疼痛',
+          '坐下或躺下後起身時的疼痛',
+          '站立時的疼痛',
+        ],
+      },
+      {
+        key: 'stiffness',
+        title: 'B. 僵硬（Stiffness）',
+        items: [
+          '早上起床後的關節僵硬',
+          '長時間坐著或休息後再活動時的僵硬',
+        ],
+      },
+      {
+        key: 'function',
+        title: 'C. 日常活動困難度（Physical Function）',
+        items: [
+          '下樓梯困難', '上樓梯困難', '由坐姿或臥姿起身困難', '站立困難',
+          '彎腰撿東西困難', '在平地走路困難', '進出車輛困難', '購物困難',
+          '穿脫襪子/絲襪困難', '起身後長時間站立困難', '做居家清潔/家務困難',
+          '外出社交/娛樂活動困難', '走較遠的路困難', '上下公共交通工具困難',
+          '坐下困難', '下蹲困難', '上床或下床困難',
+        ],
+      },
+    ];
+
+    const MAX_TOTAL = sections.reduce((acc, s) => acc + s.items.length * 4, 0); // 96
+
+    // === 產生表單 ===
+    const formRoot = document.getElementById('formRoot');
+
+    sections.forEach((sec, sIdx) => {
+      const secEl = document.createElement('section');
+      secEl.className = 'section card';
+      const header = document.createElement('div');
+      header.className = 'section-header';
+      header.innerHTML = `<div class="section-title">${sec.title}</div>` +
+                         `<div class="section-cap">每題 0–4 分（0=沒有，4=非常嚴重）</div>`;
+      secEl.appendChild(header);
+
+      sec.items.forEach((q, idx) => {
+        const fs = document.createElement('fieldset');
+        fs.className = 'q';
+        fs.innerHTML = `
+          <legend>${idx + 1}. ${q}</legend>
+          <div class="bar" aria-hidden="true"></div>
+          <div class="scale" role="radiogroup" aria-label="${q}">
+            ${[0,1,2,3,4].map(v => `
+              <label>
+                <input type="radio" name="${sec.key}-${idx}" value="${v}" data-section="${sec.key}" aria-label="${q}：${v}分" />
+                <span class="lbl"><b>${v}</b></span>
+              </label>
+            `).join('')}
+          </div>
+        `;
+        secEl.appendChild(fs);
+      });
+
+      formRoot.appendChild(secEl);
+    });
+
+    // === 計分 ===
+    function computeSection(key) {
+      const inputs = document.querySelectorAll(`input[data-section="${key}"]:checked`);
+      let sum = 0; inputs.forEach(i => sum += Number(i.value));
+      return sum;
+    }
+
+    function toLevel(percent) {
+      if (percent >= 81) return '非常嚴重';
+      if (percent >= 51) return '嚴重';
+      if (percent >= 21) return '中等';
+      return '輕微';
+    }
+
+    function refreshScores() {
+      const a = computeSection('pain');
+      const b = computeSection('stiffness');
+      const c = computeSection('function');
+      const total = a + b + c;
+      const pct = Math.round((total / MAX_TOTAL) * 100);
+
+      document.getElementById('sum-pain').textContent = `${a}`;
+      document.getElementById('sum-stiffness').textContent = `${b}`;
+      document.getElementById('sum-function').textContent = `${c}`;
+      document.getElementById('sum-total').textContent = `${total}`;
+      document.getElementById('pct').textContent = `${pct}%`;
+      document.getElementById('meter').style.width = `${pct}%`;
+      document.getElementById('level').textContent = toLevel(pct);
+    }
+
+    // 綁定事件
+    document.addEventListener('change', (e) => {
+      if (e.target && e.target.matches('input[type="radio"][data-section]')) {
+        refreshScores();
+      }
+    });
+
+    // 工具按鈕
+    document.getElementById('btnReset').addEventListener('click', () => {
+      document.querySelectorAll('input[type="radio"]').forEach(i => i.checked = false);
+      refreshScores();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    document.getElementById('btnPrint').addEventListener('click', () => window.print());
+    document.getElementById('btnScroll').addEventListener('click', () => {
+      const first = document.querySelector('.section');
+      if (first) first.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    // 首次載入
+    refreshScores();
+  </script>
+</body>
+</html>
